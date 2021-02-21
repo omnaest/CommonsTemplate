@@ -32,23 +32,24 @@ import freemarker.template.Version;
  */
 public class TemplateUtils
 {
-    public TemplateProcessorBuilder builder()
+    public static TemplateProcessorBuilder builder()
     {
         return new TemplateProcessorBuilder()
         {
-            private Map<String, Supplier<String>> keyToValueProvider = new HashMap<>();
+            private Map<String, Supplier<Object>> keyToValueProvider = new HashMap<>();
             private List<String>                  templates          = new ArrayList<>();
 
             @Override
-            public TemplateProcessorBuilder add(String key, String value)
+            public TemplateProcessorBuilder add(String key, Object value)
             {
                 return this.add(key, () -> value);
             }
 
+            @SuppressWarnings("unchecked")
             @Override
-            public TemplateProcessorBuilder add(String key, Supplier<String> valueProvider)
+            public TemplateProcessorBuilder add(String key, Supplier<?> valueProvider)
             {
-                this.keyToValueProvider.put(key, valueProvider);
+                this.keyToValueProvider.put(key, (Supplier<Object>) valueProvider);
                 return this;
             }
 
@@ -75,7 +76,7 @@ public class TemplateUtils
             @Override
             public TemplateProcessor build()
             {
-                Map<String, Supplier<String>> keyToValueProvider = this.keyToValueProvider;
+                Map<String, Supplier<Object>> keyToValueProvider = this.keyToValueProvider;
                 List<String> templates = this.templates;
                 return new TemplateProcessorImpl(templates, keyToValueProvider);
             }
@@ -85,10 +86,10 @@ public class TemplateUtils
     private static class TemplateProcessorImpl implements TemplateProcessor
     {
         private final List<String>                  templates;
-        private final Map<String, Supplier<String>> keyToValueProvider;
+        private final Map<String, Supplier<Object>> keyToValueProvider;
         private Configuration                       configuration;
 
-        private TemplateProcessorImpl(List<String> templates, Map<String, Supplier<String>> keyToValueProvider)
+        private TemplateProcessorImpl(List<String> templates, Map<String, Supplier<Object>> keyToValueProvider)
         {
             this.templates = templates;
             this.keyToValueProvider = keyToValueProvider;
@@ -127,7 +128,7 @@ public class TemplateUtils
 
         private Configuration createConfiguration(TemplateLoader templateLoader)
         {
-            Configuration configuration = new Configuration(new Version(2, 3, 31));
+            Configuration configuration = new Configuration(new Version(2, 3, 30));
             configuration.setClassForTemplateLoading(TemplateUtils.class, "templates");
             configuration.setTemplateLoader(templateLoader);
             configuration.setDefaultEncoding("UTF-8");
@@ -149,9 +150,9 @@ public class TemplateUtils
 
     public static interface TemplateProcessorBuilder
     {
-        public TemplateProcessorBuilder add(String key, String value);
+        public TemplateProcessorBuilder add(String key, Object value);
 
-        public TemplateProcessorBuilder add(String key, Supplier<String> value);
+        public TemplateProcessorBuilder add(String key, Supplier<?> value);
 
         public TemplateProcessorBuilder useTemplate(String template);
 
