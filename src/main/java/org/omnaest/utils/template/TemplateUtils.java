@@ -17,6 +17,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.commons.io.IOUtils;
+import org.omnaest.utils.ObjectUtils;
+import org.omnaest.utils.PredicateUtils;
 
 import freemarker.cache.StringTemplateLoader;
 import freemarker.cache.TemplateLoader;
@@ -36,25 +38,10 @@ public class TemplateUtils
     {
         return new TemplateProcessorBuilder()
         {
-            private Map<String, Supplier<Object>> keyToValueProvider = new HashMap<>();
-            private List<String>                  templates          = new ArrayList<>();
+            private List<String> templates = new ArrayList<>();
 
             @Override
-            public TemplateProcessorBuilder add(String key, Object value)
-            {
-                return this.add(key, () -> value);
-            }
-
-            @SuppressWarnings("unchecked")
-            @Override
-            public TemplateProcessorBuilder add(String key, Supplier<?> valueProvider)
-            {
-                this.keyToValueProvider.put(key, (Supplier<Object>) valueProvider);
-                return this;
-            }
-
-            @Override
-            public TemplateProcessorBuilder useTemplateClassResource(Class<?> type, String templateResource)
+            public PreparableTemplateProcessor useTemplateClassResource(Class<?> type, String templateResource)
             {
                 try
                 {
@@ -67,19 +54,35 @@ public class TemplateUtils
             }
 
             @Override
-            public TemplateProcessorBuilder useTemplate(String template)
+            public PreparableTemplateProcessor useTemplate(String template)
             {
                 this.templates.add(template);
-                return this;
+                return new PreparableTemplateProcessor()
+                {
+                    private Map<String, Supplier<Object>> keyToValueProvider = new HashMap<>();
+
+                    @Override
+                    public PreparableTemplateProcessor add(String key, Object value)
+                    {
+                        return this.add(key, () -> value);
+                    }
+
+                    @SuppressWarnings("unchecked")
+                    @Override
+                    public PreparableTemplateProcessor add(String key, Supplier<?> valueProvider)
+                    {
+                        this.keyToValueProvider.put(key, (Supplier<Object>) valueProvider);
+                        return this;
+                    }
+
+                    @Override
+                    public TemplateProcessor build()
+                    {
+                        return new TemplateProcessorImpl(templates, this.keyToValueProvider);
+                    }
+                };
             }
 
-            @Override
-            public TemplateProcessor build()
-            {
-                Map<String, Supplier<Object>> keyToValueProvider = this.keyToValueProvider;
-                List<String> templates = this.templates;
-                return new TemplateProcessorImpl(templates, keyToValueProvider);
-            }
         };
     }
 
@@ -109,8 +112,14 @@ public class TemplateUtils
                                  Template template = this.configuration.getTemplate("" + templateId);
                                  template.process(this.keyToValueProvider.entrySet()
                                                                          .stream()
-                                                                         .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()
-                                                                                                                                          .get())),
+                                                                         .filter(PredicateUtils.notNull())
+                                                                         .filter(entry -> entry.getKey() != null)
+                                                                         .filter(entry -> entry.getValue() != null)
+                                                                         .collect(Collectors.toMap(entry -> entry.getKey(),
+                                                                                                   entry -> Optional.ofNullable(entry.getValue())
+                                                                                                                    .map(Supplier::get)
+                                                                                                                    .orElse(""),
+                                                                                                   (o1, o2) -> ObjectUtils.defaultIfNull(o1, o2))),
                                                   writer);
                              }
                              catch (Exception e)
@@ -150,13 +159,17 @@ public class TemplateUtils
 
     public static interface TemplateProcessorBuilder
     {
-        public TemplateProcessorBuilder add(String key, Object value);
+        public PreparableTemplateProcessor useTemplate(String template);
 
-        public TemplateProcessorBuilder add(String key, Supplier<?> value);
+        public PreparableTemplateProcessor useTemplateClassResource(Class<?> type, String templateResource);
+    }
 
-        public TemplateProcessorBuilder useTemplate(String template);
+    public static interface PreparableTemplateProcessor
+    {
 
-        public TemplateProcessorBuilder useTemplateClassResource(Class<?> type, String templateResource);
+        public PreparableTemplateProcessor add(String key, Object value);
+
+        public PreparableTemplateProcessor add(String key, Supplier<?> value);
 
         public TemplateProcessor build();
 
