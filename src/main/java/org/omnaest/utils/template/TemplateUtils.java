@@ -152,7 +152,7 @@ public class TemplateUtils
 
         private Configuration createConfiguration(TemplateLoader templateLoader)
         {
-            Configuration configuration = new Configuration(new Version(2, 3, 30));
+            Configuration configuration = new Configuration(new Version(2, 3, 29));
             configuration.setClassForTemplateLoading(TemplateUtils.class, "templates");
             configuration.setTemplateLoader(templateLoader);
             configuration.setDefaultEncoding("UTF-8");
