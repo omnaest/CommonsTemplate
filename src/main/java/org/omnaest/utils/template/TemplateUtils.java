@@ -51,8 +51,7 @@ public class TemplateUtils
 {
     public static TemplateProcessorBuilder builder()
     {
-        return new TemplateProcessorBuilder()
-        {
+        return new TemplateProcessorBuilder() {
             private List<String> templates = new ArrayList<>();
 
             @Override
@@ -72,8 +71,7 @@ public class TemplateUtils
             public PreparableTemplateProcessor useTemplate(String template)
             {
                 this.templates.add(template);
-                return new PreparableTemplateProcessor()
-                {
+                return new PreparableTemplateProcessor() {
                     private Map<String, Supplier<Object>> keyToValueProvider = new HashMap<>();
 
                     @Override

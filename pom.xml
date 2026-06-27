@@ -27,7 +27,6 @@
 			<artifactId>freemarker</artifactId>
 			<version>2.3.31</version>
 		</dependency>
-
 		<dependency>
 			<groupId>org.omnaest.utils</groupId>
 			<artifactId>CommonsLangAndIO</artifactId>
